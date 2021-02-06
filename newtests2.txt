@@ -1,0 +1,58 @@
+pipeline {
+agent any
+parameters {
+gitParameter branchFilter: 'origin/(.*)', defaultValue: 'master', name: 'BRANCH', type: 'PT_BRANCH'
+ }
+
+ options {
+ buildDiscarder(logRotator(numToKeepStr: '7', artifactNumToKeepStr: '7'))
+ }
+ stages {
+ stage('Integration Tests') {
+ steps {
+ git branch: 'master', credentialsId: 'GITHUB', url: 'https://github.com/wmcglobal/QA-Automation.git'
+ dir ('PhishFeedTests'){
+ dir ('PhishDetectionEngineAPITests'){
+ sh 'python3 -m pytest test_happy_path_200.py'
+ //sh 'python3 -m pytest py.test'
+ }
+ }
+ }
+ post{
+ always {
+ office365ConnectorSend message: "Build status ", status:"Started", webhookUrl:'${Notification}'
+ }
+ }
+ }
+ }
+
+ post {
+ success {
+ office365ConnectorSend message: "Build status ", status:"success", webhookUrl:'${Notification}'
+ }
+ failure {
+ office365ConnectorSend message: "Build status ", status:"Fail", webhookUrl:'${Notification}'
+ }
+ aborted {
+ office365ConnectorSend message: "Build status ", status:"aborted", webhookUrl:'${Notification}'
+ }
+ notBuilt {
+ office365ConnectorSend message: "Build status ", status:"notBuilt", webhookUrl:'${Notification}'
+ }
+ unstable {
+ office365ConnectorSend message: "Build status ", status:"unstable", webhookUrl:'${Notification}'
+ }
+ unsuccessful {
+ office365ConnectorSend message: "Build status ", status:"unsuccessful", webhookUrl:'${Notification}'
+ }
+ fixed {
+ office365ConnectorSend message: "Build status ", status:"fixed", webhookUrl:'${Notification}'
+ }
+ changed {
+ office365ConnectorSend message: "Build status ", status:"changed", webhookUrl:'${Notification}'
+ }
+ always {
+ cleanWs()
+ }
+ }
+}
